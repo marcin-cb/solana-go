@@ -73,8 +73,18 @@ func (inst *Create) SetMint(mint solana.PublicKey) *Create {
 	return inst
 }
 
-func (inst Create) Build() *Instruction {
+func (inst *Create) SetAccounts(accounts []*solana.AccountMeta) error {
+	inst.AccountMetaSlice = accounts
+	if len(accounts) < 7 {
+		return fmt.Errorf("insufficient accounts, Create requires at-least 7 accounts not %d", len(accounts))
+	}
+	inst.Payer = accounts[0].PublicKey
+	inst.Wallet = accounts[2].PublicKey
+	inst.Mint = accounts[3].PublicKey
+	return nil
+}
 
+func (inst Create) Build() *Instruction {
 	// Find the associatedTokenAddress;
 	associatedTokenAddress, _, _ := solana.FindAssociatedTokenAddress(
 		inst.Wallet,
@@ -164,7 +174,6 @@ func (inst *Create) EncodeToTree(parent treeout.Branches) {
 			programBranch.Child(format.Instruction("Create")).
 				//
 				ParentFunc(func(instructionBranch treeout.Branches) {
-
 					// Parameters of the instruction:
 					instructionBranch.Child("Params[len=0]").ParentFunc(func(paramsBranch treeout.Branches) {})
 
@@ -199,4 +208,20 @@ func NewCreateInstruction(
 		SetPayer(payer).
 		SetWallet(walletAddress).
 		SetMint(splTokenMintAddress)
+}
+
+func (inst *Create) GetPayerAccount() *solana.AccountMeta {
+	return inst.AccountMetaSlice.Get(0)
+}
+
+func (inst *Create) GetAssociatedTokenAddressAccount() *solana.AccountMeta {
+	return inst.AccountMetaSlice.Get(1)
+}
+
+func (inst *Create) GetWalletAccount() *solana.AccountMeta {
+	return inst.AccountMetaSlice.Get(2)
+}
+
+func (inst *Create) GetMintAccount() *solana.AccountMeta {
+	return inst.AccountMetaSlice.Get(3)
 }
